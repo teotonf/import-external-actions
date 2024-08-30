@@ -1,0 +1,43 @@
+name: Import external repository
+run-name: Import 🚀
+env:
+  VAULT_ADDR: ${{ vars.VAULT_ADDR }}
+  VAULT_SKIP_VERIFY: true
+on:
+  workflow_dispatch:
+    # inputs:
+    #   cluster:
+    #     description: The Kubernetes cluster where services should be deployed.
+    #     type: choice
+    #     required: true
+    #     options:
+    #       - aks-sandbox-nonprod-westus3-02
+    #       - aks-workload-nonprod-eastus-01
+    #       - aks-workload-prod-eastus-02
+    #       - aks-workload-prod-westus3-02
+    #       - aks-workload-nonprod-westus3-02
+
+jobs:
+  import-external:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Create Repository on GH
+        uses: ./.github/actions/create-repo
+        with:
+          user: ${{ secrets.GH_USER }}
+          password: ${{ secrets.GH_PASSWORD }}
+
+      - name: Download External Git Repository
+        uses: ./.github/actions/download-external-repo
+        with:
+          repo-url: 'https://github.com/example/external-repo.git'
+
+      - name: Upload New Repository
+        uses: ./.github/actions/upload-repo
+        with:
+          user: ${{ secrets.GH_USER }}
+          password: ${{ secrets.GH_PASSWORD }}
