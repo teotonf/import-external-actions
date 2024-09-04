@@ -1,0 +1,44 @@
+name: Upload the repository to GH
+description: Upload the repository to GH
+
+inputs:
+  repo_location:
+    description: Full path for directory of the cloned repository
+    required: true
+  gh_token:
+    description: The GitHub token
+    required: true
+  repository_owner:
+    description: The owner of the repository
+    required: true
+  repository_name:
+    description: The name of the repository
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Configure git repo to GH
+      shell: bash
+      run: |
+        cd ${{ inputs.repo_location }}
+
+        R_BRANCH=$(git branch -a | grep -v 'main' | sed s,remotes/,,g | xargs)
+
+        for branch in $R_BRANCH; do
+          git checkout -b ${branch#origin/} --track $branch
+        done
+
+        branches=$(git branch | sed 's,*,,g' | xargs)
+        echo "branches: $branches"
+
+        git remote add upstream https://${{ inputs.gh_token }}@github.com/${{ inputs.repository_owner }}/${{ inputs.repository_name }}.git
+
+        for branch in $branches; do
+          git push upstream $branch
+        done
+
+        git push --tags upstream
+
+        # git remote set-url origin https://${{ inputs.gh_token }}@github.com/${{ inputs.repository_owner }}/${{ inputs.repository_name }}.git
+        # git push origin 

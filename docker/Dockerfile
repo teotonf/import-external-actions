@@ -1,23 +1,14 @@
-FROM ubuntu:latest
+FROM ubuntu:latest as base
 LABEL maintainer "Frederico Bedê <bede.apps@gmail.com>"
 
 RUN apt-get update && apt-get install -y\
   tar\
   wget\
   gnupg\
-  ca-certificates\
-  unzip\
-  git\
-  ca-certificates
-
-COPY ./*.pem /usr/local/share/ca-certificates/
-
-RUN chmod 644 /usr/local/share/ca-certificates/*.pem &&\
-  update-ca-certificates
-  
+  unzip
+ 
 ARG PRODUCT=terraform
 ARG VERSION=1.9.1
-ARG USER=guest
 
 ARG TMP_APPS_DIR=/tmp/apps/install
 
@@ -33,9 +24,22 @@ RUN cd ${TMP_APPS_DIR} && \
   grep ${PRODUCT}_${VERSION}_linux_amd64.zip ${PRODUCT}_${VERSION}_SHA256SUMS | sha256sum -c && \
   unzip ${TMP_APPS_DIR}/${PRODUCT}_${VERSION}_linux_amd64.zip -d /tmp/apps
 
-# Remove temporary files
-RUN cp -r /tmp/apps/* /usr/local/bin/ &&\
-  rm -rf /tmp/apps
+FROM ubuntu:latest
+
+ARG USER=guest
+
+RUN apt-get update && apt-get install -y\
+  git\
+  ca-certificates\
+  openssh-client\
+  sshpass
+
+COPY ./*.pem /usr/local/share/ca-certificates/
+
+RUN chmod 644 /usr/local/share/ca-certificates/*.pem &&\
+  update-ca-certificates
+
+COPY --from=base /tmp/apps/* /usr/local/bin/
 
 # Create a new user
 RUN useradd -ms /bin/bash ${USER}

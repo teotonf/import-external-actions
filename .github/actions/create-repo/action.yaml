@@ -1,0 +1,20 @@
+name: Create Repository on GH
+
+description: Create a new repository on GitHub
+
+inputs:
+  tf_plan:
+    description: The plan location
+    type: string
+    required: true
+  tf_out:
+    description: The output directory of the terraform state
+    default: "/tmp/import-tf-state"
+
+runs:
+  using: composite
+  steps:
+    - name: Terraform Plan
+      run: |
+        TF_DATA_DIR=${{ inputs.tf_out }}/.terraform \
+        terraform -chdir=terraform apply -auto-approve ${{ inputs.tf_plan }}

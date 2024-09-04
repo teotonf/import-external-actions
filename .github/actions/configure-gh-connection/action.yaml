@@ -1,0 +1,39 @@
+name: Configure and verify GH access
+
+description: Try connect to GH and verify it
+
+inputs:
+  private_key_location:
+    description: Full path for directory of private key file to access GH 
+    required: true
+outputs:
+  result:
+    description: Result of check repo
+    value: ${{ steps.check-gh.outputs.result }}
+
+runs:
+  using: composite
+  steps:
+    - name: Configure SSH
+      id: ssh-config
+      run: |
+        CONFIG_FILE=/tmp/config
+
+        cat <<EOF > $CONFIG_FILE
+        Host github.com
+          AddKeysToAgent yes
+          IdentityFile ${{ inputs.private_key_location }}/gh_id_ed25519
+          IgnoreUnknown UseKeychain
+        EOF
+        
+        echo "ssh_config_file=$CONFIG_FILE" >> $GITHUB_OUTPUT 
+
+    - name: Check GH connection
+      id: check-gh
+      run: |
+        eval "$(ssh-agent -s)"
+        echo 'Cw203ad2' | ssh-add -p keyfile
+
+        test=$(ssh -T git@github.com -F ${{ steps.ssh-config.outputs.ssh_config_file }} -oStrictHostKeyChecking=no -E /tmp/log 2>&1 >> /tmp/log || true)
+        echo "$test" | grep -q "successfully authenticated" && echo "result=success" >> $GITHUB_OUTPUT || echo "result=failure" >> $GITHUB_OUTPUT
+

@@ -1,0 +1,43 @@
+name: Init Terraform
+
+description: Runs terraform init upgrade and terraform plan
+
+inputs:
+  tf_out:
+    description: The output directory of the terraform state
+    required: true
+    default: "/tmp/import-tf-state"
+  repository_name:
+    description: The name of the repository
+    required: true
+  repository_owner:
+    description: The owner of the repository
+    required: true
+  gh_token:
+    description: The GitHub token
+    required: true
+
+outputs:
+  tf_plan:
+    description: The plan location
+    value: ${{ steps.tf-plan.outputs.plan_location }}
+
+runs:
+  using: composite
+  steps:
+    - name: Terraform Init
+      run: TF_DATA_DIR=${{ inputs.tf_out }}/.terraform terraform -chdir=terraform init -reconfigure
+
+    - name: Terraform Plan
+      id: tf-plan
+      run: |
+        PLAN_OUTPUT=${{ inputs.tf_out }}/tf-plan
+        TF_DATA_DIR=${{ inputs.tf_out }}/.terraform \
+        TF_VAR_gh_repository_name=${{ inputs.repository_name }} \
+        TF_VAR_gh_repository_owner=${{ inputs.repository_owner }} \
+        TF_VAR_gh_admin_token=${{ inputs.gh_token }} \
+        TF_VAR_visibility="public" \
+        terraform -chdir=terraform plan -out=$PLAN_OUTPUT
+
+        echo "plan_location=$PLAN_OUTPUT" >> $GITHUB_OUTPUT
+ 

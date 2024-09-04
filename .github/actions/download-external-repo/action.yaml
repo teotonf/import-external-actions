@@ -1,0 +1,65 @@
+name: Clone external repository
+description: Clone full repo
+
+inputs:
+  private_key_location:
+    description: Full path for directory of private key file to access GH 
+    required: true
+  host:
+    description: Full path for directory of private key file to access GH 
+    required: true
+  repository_address:
+    description: Full path for directory of private key file to access GH 
+    required: true
+  key_file_password:
+    description: password for the key file
+    required: true
+outputs:
+  repo_location:
+    description: Location of the cloned repository
+    value: ${{ steps.clone-repo.outputs.repo_location }}
+runs:
+  using: composite
+  steps:
+    - name: Configure SSH
+      id: ssh-config
+      shell: bash
+      run: |
+        CONFIG_FILE=/tmp/config
+
+        cat <<EOF >> $CONFIG_FILE
+        Host ${{ inputs.host }}
+          AddKeysToAgent yes
+          IdentityFile ${{ inputs.private_key_location }}
+          IgnoreUnknown UseKeychain
+        EOF
+        
+        echo "ssh_config_file=$CONFIG_FILE" >> $GITHUB_OUTPUT 
+
+    - name: Check external repo connection
+      shell: bash
+      run: |
+        K_FILE=${{ inputs.private_key_location }}
+        ASK_PASS=/tmp/askpass.sh
+
+        cat <<EOF > $ASK_PASS
+        #!/bin/bash
+        echo "${{ inputs.key_file_password }}"
+        EOF
+
+        chmod +x $ASK_PASS
+
+        eval "$(ssh-agent -s)"
+        SSH_ASKPASS_REQUIRE=force SSH_ASKPASS=$ASK_PASS ssh-add ${{ inputs.private_key_location }}
+        ssh -T git@${{ inputs.host }} -F ${{ steps.ssh-config.outputs.ssh_config_file }} -oStrictHostKeyChecking=no
+
+        echo "ASK_PASS=$ASK_PASS" >> $GITHUB_ENV
+
+    - name: Clone external repository
+      id: clone-repo
+      run: |
+        export GIT_SSH_COMMAND="SSH_ASKPASS_REQUIRE=force SSH_ASKPASS=$ASK_PASS ssh -F ${{ steps.ssh-config.outputs.ssh_config_file }}"
+
+        git clone ${{ inputs.repository_address }} /tmp/external-repo
+
+        echo "repo_location=/tmp/external-repo" >> $GITHUB_OUTPUT

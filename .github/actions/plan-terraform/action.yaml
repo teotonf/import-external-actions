@@ -1,0 +1,54 @@
+name: Create Repository on GH
+
+description: Create a new repository on GitHub
+
+inputs:
+  user:
+    description: GitHub username
+    required: true
+  password:
+    description: GitHub password or personal access token
+    required: true
+  repo_name:
+    description: Name of the new repository
+    required: true
+  private:
+    description: Set the repository to private (true/false)
+    required: false
+    default: false
+
+outputs:
+  repo_url:
+    description: URL of the created repository
+
+runs:
+  using: composite
+  steps:
+    - name: Create Repository
+      run: |
+        TF_DATA_DIR=/tmp/import-tf-state/.terraform terraform -chdir=terraform init -reconfigure
+        #  terraform
+
+        # cd terraform
+
+        # terraform init -state=/tmp/import-tf-state/terraform.tfstate
+
+        # cd -
+
+
+        # terraform version
+
+        # ls -la
+        # echo '----'
+        # ls -l /tmp
+        # ls -l /tmp/ssh-keys
+        # ls -l /tmp/certificates
+
+        # export SSHPASS='my_secret_password'
+        # # # Connect with sshpass -e
+        # # sshpass -e ssh user@host
+
+        # # eval "$(ssh-agent -s)"
+        # ssh -T git@github.com -F /tmp/ssh-keys/docker-config -oStrictHostKeyChecking=no
+
+        # echo $PWD
