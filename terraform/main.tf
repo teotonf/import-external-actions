@@ -1,6 +1,6 @@
 resource "github_repository" "new_repo" {
   name        = var.gh_repository_name
-  description = "First imported repository"
+  description = var.gh_repo_description
 
   visibility = var.visibility
 
@@ -15,7 +15,8 @@ resource "github_branch_protection" "new_repo_protection" {
   allows_deletions = true
 
   required_pull_request_reviews {
-    dismiss_stale_reviews = true
-    restrict_dismissals   = true
+    dismiss_stale_reviews      = true
+    restrict_dismissals        = true
+    require_code_owner_reviews = true
   }
 }

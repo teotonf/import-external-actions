@@ -60,6 +60,8 @@ runs:
       run: |
         export GIT_SSH_COMMAND="SSH_ASKPASS_REQUIRE=force SSH_ASKPASS=$ASK_PASS ssh -F ${{ steps.ssh-config.outputs.ssh_config_file }}"
 
+        [ -d /tmp/external-repo ] && rm -rf /tmp/external-repo
+
         git clone ${{ inputs.repository_address }} /tmp/external-repo
 
         echo "repo_location=/tmp/external-repo" >> $GITHUB_OUTPUT

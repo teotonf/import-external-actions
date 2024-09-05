@@ -6,8 +6,6 @@ terraform {
     }
   }
   backend "local" {
-    path          = "/tmp/import-tf-state/terraform.tfstate"
-    workspace_dir = "/tmp/import-tf-state"
   }
 
   required_version = "1.9.1"

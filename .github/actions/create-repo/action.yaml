@@ -9,7 +9,7 @@ inputs:
     required: true
   tf_out:
     description: The output directory of the terraform state
-    default: "/tmp/import-tf-state"
+    required: true
 
 runs:
   using: composite

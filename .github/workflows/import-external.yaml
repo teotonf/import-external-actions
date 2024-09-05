@@ -16,6 +16,10 @@ on:
         description: Name of the new repository
         type: string
         default: ${{ github.repository_owner }}
+      gh_repo_description:
+        description: Description of the new repository
+        type: string
+        required: true
       external_repo_url:
         description: URL of the external repository
         type: string
@@ -47,15 +51,17 @@ jobs:
         id: tf-plan
         uses: ./.github/actions/init-terraform
         with:
-          tf_out: /tmp/import-tf-state
+          tf_state_out: "/tmp/import-tf-state"
           repository_name: ${{ inputs.gh_repo_name }}
           repository_owner: ${{ inputs.gh_repo_owner }}
           gh_token: ${{ secrets.gh_token }}
+          gh_repo_description: ${{ inputs.gh_repo_description }}
 
       - name: Create Repository on GH
         uses: ./.github/actions/create-repo
         with:
           tf_plan: ${{ steps.tf-plan.outputs.tf_plan }}
+          tf_out: ${{ steps.tf-plan.outputs.tf_out }}
 
       - name: Clone external repository
         uses: ./.github/actions/download-external-repo
@@ -73,18 +79,3 @@ jobs:
           repository_name: ${{ inputs.gh_repo_name }}
           repository_owner: ${{ inputs.gh_repo_owner }}
           gh_token: ${{ secrets.gh_token }}
-
-      #   with:
-      #     user: ${{ secrets.GH_USER }}
-      #     password: ${{ secrets.GH_PASSWORD }}
-
-      # - name: Download External Git Repository
-      #   uses: ./.github/actions/download-external-repo
-      #   with:
-      #     repo-url: 'https://github.com/example/external-repo.git'
-
-      # - name: Upload New Repository
-      #   uses: ./.github/actions/upload-repo
-      #   with:
-      #     user: ${{ secrets.GH_USER }}
-      #     password: ${{ secrets.GH_PASSWORD }}

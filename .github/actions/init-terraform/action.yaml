@@ -3,10 +3,9 @@ name: Init Terraform
 description: Runs terraform init upgrade and terraform plan
 
 inputs:
-  tf_out:
+  tf_state_out:
     description: The output directory of the terraform state
     required: true
-    default: "/tmp/import-tf-state"
   repository_name:
     description: The name of the repository
     required: true
@@ -16,27 +15,50 @@ inputs:
   gh_token:
     description: The GitHub token
     required: true
+  gh_repo_description:
+    description: The description of the repository
+    required: true
 
 outputs:
   tf_plan:
     description: The plan location
     value: ${{ steps.tf-plan.outputs.plan_location }}
+  tf_out:
+    description: The plan location
+    value: ${{ steps.tf-init.outputs.tf_out_dir }}
 
 runs:
   using: composite
   steps:
     - name: Terraform Init
-      run: TF_DATA_DIR=${{ inputs.tf_out }}/.terraform terraform -chdir=terraform init -reconfigure
+      shell: bash
+      id: tf-init
+      run: |
+        # Configure the terraform state
+        cat <<EOF > /tmp/backend.hcl
+        path = "${{ inputs.tf_state_out }}/${{ inputs.repository_name }}/terraform.tfstate"
+        EOF
+
+        TF_OUT_DIR=${{ inputs.tf_state_out }}/${{ inputs.repository_name }}
+        [ -d $TF_OUT_DIR ] || mkdir -p $TF_OUT_DIR
+
+        TF_DATA_DIR=$TF_OUT_DIR/.terraform terraform -chdir=terraform init -reconfigure -backend-config=/tmp/backend.hcl
+
+        echo "tf_out_dir=$TF_OUT_DIR" >> $GITHUB_OUTPUT
 
     - name: Terraform Plan
+      shell: bash
       id: tf-plan
       run: |
-        PLAN_OUTPUT=${{ inputs.tf_out }}/tf-plan
-        TF_DATA_DIR=${{ inputs.tf_out }}/.terraform \
+        TF_OUT_DIR=${{ steps.tf-init.outputs.tf_out_dir }}
+        PLAN_OUTPUT=$TF_OUT_DIR/tf-plan
+
+        TF_DATA_DIR=$TF_OUT_DIR/.terraform \
         TF_VAR_gh_repository_name=${{ inputs.repository_name }} \
         TF_VAR_gh_repository_owner=${{ inputs.repository_owner }} \
         TF_VAR_gh_admin_token=${{ inputs.gh_token }} \
         TF_VAR_visibility="public" \
+        TF_VAR_gh_repo_description="${{ inputs.gh_repo_description }}" \
         terraform -chdir=terraform plan -out=$PLAN_OUTPUT
 
         echo "plan_location=$PLAN_OUTPUT" >> $GITHUB_OUTPUT

@@ -23,22 +23,20 @@ runs:
       run: |
         cd ${{ inputs.repo_location }}
 
-        R_BRANCH=$(git branch -a | grep -v 'main' | sed s,remotes/,,g | xargs)
+        R_BRANCH=$(git branch -a | grep -v 'main' || true)
 
-        for branch in $R_BRANCH; do
-          git checkout -b ${branch#origin/} --track $branch
-        done
+        [ ! -z "$R_BRANCH" ] && {
+          for branch in `echo $R_BRANCH  | sed s,remotes/,,g | xargs`; do
+            git checkout -b ${branch#origin/} --track $branch
+          done
+        }
 
-        branches=$(git branch | sed 's,*,,g' | xargs)
-        echo "branches: $branches"
+        branches=$(git branch | grep -v 'main' | sed 's,*,,g' | xargs || true)
 
         git remote add upstream https://${{ inputs.gh_token }}@github.com/${{ inputs.repository_owner }}/${{ inputs.repository_name }}.git
 
-        for branch in $branches; do
+        for branch in "main $branches"; do
           git push upstream $branch
         done
 
         git push --tags upstream
-
-        # git remote set-url origin https://${{ inputs.gh_token }}@github.com/${{ inputs.repository_owner }}/${{ inputs.repository_name }}.git
-        # git push origin 

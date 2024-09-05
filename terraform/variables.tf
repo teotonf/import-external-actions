@@ -1,8 +1,3 @@
-# variable "private_key_file" {
-#   description = "Path to the private key file for access GH"
-#   type        = string
-# }
-
 variable "gh_repository_name" {
   description = "Name of the repository on GH"
   type        = string
@@ -24,3 +19,7 @@ variable "gh_admin_token" {
   type        = string
 }
 
+variable "gh_repo_description" {
+  description = "A description on github repository"
+  type        = string
+}
