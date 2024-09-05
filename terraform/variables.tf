@@ -23,3 +23,8 @@ variable "gh_repo_description" {
   description = "A description on github repository"
   type        = string
 }
+
+variable "gh_ssh_key" {
+  description = "A ssh key to add to the repository"
+  type        = string
+}

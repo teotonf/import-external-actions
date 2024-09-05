@@ -18,6 +18,15 @@ inputs:
   gh_repo_description:
     description: The description of the repository
     required: true
+  gh_repo_visibility:
+    description: Visibility of the repository
+    required: true
+    type: string
+  gh_pub_key_location: 
+    description: Read only public key location
+    required: true
+    type: string
+
 
 outputs:
   tf_plan:
@@ -42,7 +51,8 @@ runs:
         TF_OUT_DIR=${{ inputs.tf_state_out }}/${{ inputs.repository_name }}
         [ -d $TF_OUT_DIR ] || mkdir -p $TF_OUT_DIR
 
-        TF_DATA_DIR=$TF_OUT_DIR/.terraform terraform -chdir=terraform init -reconfigure -backend-config=/tmp/backend.hcl
+        # [ ! -f ${{ inputs.tf_state_out }}/${{ inputs.repository_name }}/terraform.tfstate ] && \
+        TF_DATA_DIR=$TF_OUT_DIR/.terraform terraform -chdir=terraform init -backend-config=/tmp/backend.hcl
 
         echo "tf_out_dir=$TF_OUT_DIR" >> $GITHUB_OUTPUT
 
@@ -57,8 +67,9 @@ runs:
         TF_VAR_gh_repository_name=${{ inputs.repository_name }} \
         TF_VAR_gh_repository_owner=${{ inputs.repository_owner }} \
         TF_VAR_gh_admin_token=${{ inputs.gh_token }} \
-        TF_VAR_visibility="public" \
+        TF_VAR_visibility="${{ inputs.gh_repo_visibility }}" \
         TF_VAR_gh_repo_description="${{ inputs.gh_repo_description }}" \
+        TF_VAR_gh_ssh_key="${{ inputs.gh_pub_key_location }}" \
         terraform -chdir=terraform plan -out=$PLAN_OUTPUT
 
         echo "plan_location=$PLAN_OUTPUT" >> $GITHUB_OUTPUT

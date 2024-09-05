@@ -1,0 +1,32 @@
+name: Generate SSH key
+
+description: Generate SSH key to access the GH repository
+
+inputs:
+  key_location:
+    description: Path to save the key
+    type: string
+    required: true
+  key_password:
+    description: Key password
+    type: string
+    required: true
+  email:
+    description: Associated email
+    type: string
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Generate ssh key pair
+      run: |
+        EMAIL=${{ inputs.email }}
+        KEY_FILE=${{ inputs.key_location }}
+
+        [ ! -f $KEY_FILE ] && {
+          echo "Generating SSH key pair for $EMAIL at $KEY_FILE and password ${{ inputs.key_password }}"
+          ssh-keygen -t ed25519 -C "$EMAIL" -f "$KEY_FILE" -P "${{ inputs.key_password }}"
+        } || {
+          echo "Key file already exists at $KEY_FILE"
+        }

@@ -7,6 +7,10 @@ on:
       private_key_location:
         description: Location of the private key to access GH.
         type: string
+        default:  /tmp/tf-output/gh-ssh-key
+      private_email:
+        description: Associated email
+        type: string
         required: true
       gh_repo_name:
         description: Name of the new repository
@@ -20,6 +24,10 @@ on:
         description: Description of the new repository
         type: string
         required: true
+      gh_visibilty:
+        description: Visibility of the new repository
+        type: string
+        default: private
       external_repo_url:
         description: URL of the external repository
         type: string
@@ -35,6 +43,17 @@ on:
       external_host:
         description: Full path for directory of private key file to access GH 
         required: true
+      import_external_repo:
+        description: Import external repository
+        type: boolean
+        required: false
+        default: true
+      create_repo:
+        description: True to already create the repository, false to just see the Terraform plan
+        type: boolean
+        required: false
+        default: true
+
 jobs:
   import-external:
     runs-on: ubuntu-latest
@@ -43,9 +62,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
 
-      # - name: Test scripts
-      #   run: |
-      #     echo "key: [${{ github.repository_owner }}]"
+      - name: Configure ssh key
+        uses: ./.github/actions/generate-ssh-key
+        with:
+          key_location: ${{ inputs.private_key_location }}
+          key_password: ${{ secrets.gh_ssh_key_password }}
+          email: ${{ inputs.private_email }}
 
       - name: Terraform Init and Plan
         id: tf-plan
@@ -56,6 +78,15 @@ jobs:
           repository_owner: ${{ inputs.gh_repo_owner }}
           gh_token: ${{ secrets.gh_token }}
           gh_repo_description: ${{ inputs.gh_repo_description }}
+          gh_repo_visibility: ${{ inputs.gh_visibilty }}
+          gh_pub_key_location: "${{ inputs.private_key_location }}.pub"
+
+      - name: Should create repository
+        if: ${{ inputs.create_repo != true }}
+        run: |
+          echo "Plan: ${{ steps.tf-plan.outputs.tf_plan }}"
+          echo "Out: ${{ steps.tf-plan.outputs.tf_out }}"
+          exit 1
 
       - name: Create Repository on GH
         uses: ./.github/actions/create-repo
@@ -65,6 +96,7 @@ jobs:
 
       - name: Clone external repository
         uses: ./.github/actions/download-external-repo
+        if: ${{ inputs.import_external_repo == true }}
         id: clone-repo
         with:
           host: ${{ inputs.external_host }}
@@ -74,8 +106,11 @@ jobs:
 
       - name: Upload new repository to GH
         uses: ./.github/actions/upload-repo
+        if: ${{ inputs.import_external_repo == true }}
         with:
           repo_location: ${{ steps.clone-repo.outputs.repo_location }}
           repository_name: ${{ inputs.gh_repo_name }}
           repository_owner: ${{ inputs.gh_repo_owner }}
           gh_token: ${{ secrets.gh_token }}
+
+
