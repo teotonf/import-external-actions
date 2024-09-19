@@ -73,7 +73,7 @@ external_repo_password=<your external repository password>
 gh_ssh_key_password=<GH pkey password>
 ```
 
-At last, define an script in `$HOME/act-scripts/import-repos.sh` to run act as follows:
+At last, define a script in `$HOME/act-scripts/import-repos.sh` to run act as follows:
 
 ```sh
 #!/bin/bash
