@@ -15,7 +15,7 @@ Act repository can be found in [act-repo][nektos-act-repo]
 - Nektos act installed
 
 ### Creating the runner
-To configure a runner use the [Dockerfile][./docker/Dockerfile] to create an image with the name `gh-runner` (the name of container will be used for the example)
+To configure a runner use the [Dockerfile](./docker/Dockerfile) to create an image with the name `gh-runner` (the name of container will be used for the example)
 
 ### Configuring inputs and secrets
 For the example we will use files to configure inputs and secrets.
