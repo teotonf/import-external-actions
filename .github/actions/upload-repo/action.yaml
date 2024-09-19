@@ -8,12 +8,6 @@ inputs:
   gh_token:
     description: The GitHub token
     required: true
-  repository_owner:
-    description: The owner of the repository
-    required: true
-  repository_name:
-    description: The name of the repository
-    required: true
 
 runs:
   using: composite
@@ -31,9 +25,11 @@ runs:
           done
         }
 
+        REPO_ADDRESS=`echo $new_repo_url | sed -e s,https://,https://${{ inputs.gh_token }}@,g`
+
         branches=$(git branch | grep -v 'main' | sed 's,*,,g' | xargs || true)
 
-        git remote add upstream https://${{ inputs.gh_token }}@github.com/${{ inputs.repository_owner }}/${{ inputs.repository_name }}.git
+        git remote add upstream $REPO_ADDRESS
 
         for branch in "main $branches"; do
           git push upstream $branch

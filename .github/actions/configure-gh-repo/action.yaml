@@ -35,6 +35,11 @@ inputs:
     type: boolean
     required: true
 
+outputs:
+  new_repo_url:
+    description: The created repository URL
+    value: ${{ steps.tf-plan-applied.outputs.repository_url }}
+
 runs:
   using: composite
   steps:
@@ -75,11 +80,15 @@ runs:
 
     - name: Terraform apply (Create)
       if: ${{ ( inputs.create_repo == true || inputs.create_repo == 'true' ) && ( inputs.remove_repo == false || inputs.remove_repo == 'false' ) }}
+      id: tf-plan-applied
       run: |
-        echo "Creating repository"
-
         TF_DATA_DIR=${{ steps.tf-init.outputs.tf_out_dir }}/.terraform \
         terraform -chdir=terraform apply -auto-approve ${{ steps.tf-plan.outputs.plan_location }}
+
+        test=$(TF_DATA_DIR=${{ steps.tf-init.outputs.tf_out_dir }}/.terraform \
+        terraform -chdir=terraform output gh_address)
+
+        echo "repository_url=$test" >> $GITHUB_OUTPUT
 
     - name: Terraform destroy (Remove)
       if: ${{ ( inputs.remove_repo == true || inputs.remove_repo == 'true' ) && ( inputs.create_repo == false || inputs.create_repo == 'false' ) }}

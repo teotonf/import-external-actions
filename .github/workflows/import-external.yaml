@@ -65,6 +65,8 @@ jobs:
   configure-gh-repository:
     runs-on: ubuntu-latest
     if: ${{ inputs.create_repo == true || inputs.create_repo == 'true' || inputs.remove_repo == true || inputs.remove_repo == 'true' }}
+    outputs:
+      new_repo_url: ${{  steps.tf-plan.outputs.new_repo_url }}
 
     steps:
       - name: Checkout repository
@@ -99,6 +101,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v1
 
+      - name: Configure env for GH address
+        if: ${{ inputs.create_repo == false || inputs.create_repo == 'false' }}
+        run: echo "new_repo_url=${{ steps.tf-plan.outputs.new_repo_url }}" >> $GITHUB_ENV
+
       - name: Clone external repository 
         uses: ./.github/actions/download-external-repo
         if: ${{ inputs.import_external_repo == true || inputs.import_external_repo == 'true' }}
@@ -111,13 +117,19 @@ jobs:
           username: ${{ inputs.external_repo_user }}
           password: ${{ secrets.external_repo_password }}
 
+      - name: GH address from create repo
+        if: ${{ inputs.create_repo == true || inputs.create_repo == 'true' }}
+        run: echo "new_repo_url=${{ needs.configure-gh-repository.outputs.new_repo_url }}" >> $GITHUB_ENV
+
+      - name: GH address from inputs
+        if: ${{ inputs.create_repo != true && inputs.create_repo != 'true' }}
+        run: echo "new_repo_url=${{ inputs.gh_repo_address }}" >> $GITHUB_ENV
+
       - name: Upload new repository to GH
         uses: ./.github/actions/upload-repo
         if: ${{ inputs.import_external_repo == true || inputs.import_external_repo == 'true' }}
         with:
           repo_location: ${{ steps.clone-repo.outputs.repo_location }}
-          repository_name: ${{ inputs.gh_repo_name }}
-          repository_owner: ${{ inputs.gh_repo_owner }}
           gh_token: ${{ secrets.gh_token }}
 
 
