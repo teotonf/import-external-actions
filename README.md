@@ -99,11 +99,9 @@ act \
 --action-offline-mode \
 -W $REPO_LOCATION/.github/workflows/import-external.yaml \
 --local-repository github.com@main=$REPO_LOCATION \
---container-options "-v $HOST_DEVOPS_WORKSPACE/ssh-keys:/tmp/ssh-keys \ #If you intend to use the SSH approach to access externals map your keys to gh-runner container
--v $HOST_CERTIFICATES_LOCATION:/tmp/certificates \ # Map your ssh keys for external access to a place within gh-runner container
+--container-options "-v $HOST_CERTIFICATES_LOCATION:/tmp/certificates \
 -v $TF_STAT_DIR/my-tf-state:/tmp/import-tf-state \ 
--v $TF_STAT_DIR/tf-output:/tmp/tf-output" 
-# --insecure-secrets # You can use this flag to see the secrets 
+-v $TF_STAT_DIR/tf-output:/tmp/tf-output" # Map your ssh keys for external access to a place within gh-runner container
 ```
 
 At the end, you should have something like:
@@ -119,6 +117,8 @@ So to execute on `foo` repository config run:
 cd $HOME/act-scripts
 . ./import-repos.sh "foo"
 ```
+
+After run, you can get your GH read-only keys in `<Root folder you'd downloaded this repo>/my-tf-state/tf-output` folder
 
 [nektos-act-repo]: <https://github.com/nektos/act>
 [nektos-act]: <https://nektosact.com>
