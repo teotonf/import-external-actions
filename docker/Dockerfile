@@ -31,7 +31,8 @@ ARG USER=guest
 RUN apt-get update && apt-get install -y\
   git\
   ca-certificates\
-  openssh-client
+  openssh-client \
+  jq
 
 COPY ./*.pem /usr/local/share/ca-certificates/
 

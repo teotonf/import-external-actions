@@ -4,7 +4,6 @@ description: Clone full repo
 inputs:
   private_key_location:
     description: Full path for directory of private key file to access GH 
-    required: true
   host:
     description: Full path for directory of private key file to access GH 
     required: true
@@ -13,15 +12,24 @@ inputs:
     required: true
   key_file_password:
     description: password for the key file
-    required: true
+  username:
+    description: Username for external repo
+  password:
+    description: Password for the repo
+
 outputs:
   repo_location:
     description: Location of the cloned repository
     value: ${{ steps.clone-repo.outputs.repo_location }}
+  repo_default_branch:
+    description: Default branch of the cloned repository
+    value: ${{ steps.clone-repo.outputs.repo_default_branch }}
+
 runs:
   using: composite
   steps:
     - name: Configure SSH
+      if: ${{ inputs.private_key_location && inputs.key_file_password }}
       id: ssh-config
       shell: bash
       run: |
@@ -38,6 +46,7 @@ runs:
 
     - name: Check external repo connection
       shell: bash
+      if: ${{ inputs.private_key_location && inputs.key_file_password }}
       run: |
         K_FILE=${{ inputs.private_key_location }}
         ASK_PASS=/tmp/askpass.sh
@@ -55,13 +64,37 @@ runs:
 
         echo "ASK_PASS=$ASK_PASS" >> $GITHUB_ENV
 
+    - name: Configure external address
+      id: external-address
+      shell: bash
+      run: |
+        [ ! -z "${{ inputs.private_key_location }}" ] && [ ! -z "${{ inputs.key_file_password }}" ] &&\
+          REPO_ADDRESS=`echo "${{ inputs.repository_address }}"` ||\
+          {
+            PASS=$(echo "{ \"pass\":\"${{ inputs.password }}\"}" | jq -r '.pass | @uri')
+            echo "::add-mask::$PASS"
+            REPO_ADDRESS=`echo ${{ inputs.repository_address }} | sed -e s,https://,https://${{ inputs.username }}:$PASS@,g`
+          }
+
+        echo "gh_address=$REPO_ADDRESS" >> $GITHUB_OUTPUT
+
     - name: Clone external repository
       id: clone-repo
       run: |
+
         export GIT_SSH_COMMAND="SSH_ASKPASS_REQUIRE=force SSH_ASKPASS=$ASK_PASS ssh -F ${{ steps.ssh-config.outputs.ssh_config_file }}"
+
+        REPO_ADDRESS=`echo ${{ steps.external-address.outputs.gh_address }}`
 
         [ -d /tmp/external-repo ] && rm -rf /tmp/external-repo
 
-        git clone ${{ inputs.repository_address }} /tmp/external-repo
+        git clone $REPO_ADDRESS /tmp/external-repo
+
+        cd /tmp/external-repo
+
+        D_BRANCH=$(git symbolic-ref --short HEAD)
+       
+        cd - > /dev/null 2>&1
 
         echo "repo_location=/tmp/external-repo" >> $GITHUB_OUTPUT
+        echo "repo_default_branch=$D_BRANCH" >> $GITHUB_OUTPUT

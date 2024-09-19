@@ -11,7 +11,6 @@ on:
       private_email:
         description: Associated email
         type: string
-        required: true
       gh_repo_name:
         description: Name of the new repository
         type: string
@@ -35,7 +34,6 @@ on:
       external_repo_user:
         description: User to access the external repository
         type: string
-        required: true
       external_repo_ssh_key_location:
         description: User to access the external repository
         type: string
@@ -49,17 +47,27 @@ on:
         required: false
         default: true
       create_repo:
+        description: True to create the repository, false to just see the Terraform plan
+        type: boolean
+        required: true
+        default: false
+      remove_repo:
         description: True to already create the repository, false to just see the Terraform plan
         type: boolean
-        required: false
-        default: true
+        required: true
+        default: false
+      gh_username:
+        description: Github username
+      gh_repo_address:
+        description: Github repository address to import to
 
 jobs:
-  import-external:
+  configure-gh-repository:
     runs-on: ubuntu-latest
+    if: ${{ inputs.create_repo == true || inputs.create_repo == 'true' || inputs.remove_repo == true || inputs.remove_repo == 'true' }}
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v1
 
       - name: Configure ssh key
@@ -69,9 +77,9 @@ jobs:
           key_password: ${{ secrets.gh_ssh_key_password }}
           email: ${{ inputs.private_email }}
 
-      - name: Terraform Init and Plan
+      - name: Terraform Init / Plan / Apply
         id: tf-plan
-        uses: ./.github/actions/init-terraform
+        uses: ./.github/actions/configure-gh-repo
         with:
           tf_state_out: "/tmp/import-tf-state"
           repository_name: ${{ inputs.gh_repo_name }}
@@ -80,33 +88,32 @@ jobs:
           gh_repo_description: ${{ inputs.gh_repo_description }}
           gh_repo_visibility: ${{ inputs.gh_visibilty }}
           gh_pub_key_location: "${{ inputs.private_key_location }}.pub"
+          create_repo: ${{ inputs.create_repo }}
+          remove_repo: ${{ inputs.remove_repo }}
 
-      - name: Should create repository
-        if: ${{ inputs.create_repo != true }}
-        run: |
-          echo "Plan: ${{ steps.tf-plan.outputs.tf_plan }}"
-          echo "Out: ${{ steps.tf-plan.outputs.tf_out }}"
-          exit 1
+  import-to-gh-repository:
+    needs: [ configure-gh-repository ]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v1
 
-      - name: Create Repository on GH
-        uses: ./.github/actions/create-repo
-        with:
-          tf_plan: ${{ steps.tf-plan.outputs.tf_plan }}
-          tf_out: ${{ steps.tf-plan.outputs.tf_out }}
-
-      - name: Clone external repository
+      - name: Clone external repository 
         uses: ./.github/actions/download-external-repo
-        if: ${{ inputs.import_external_repo == true }}
+        if: ${{ inputs.import_external_repo == true || inputs.import_external_repo == 'true' }}
         id: clone-repo
         with:
           host: ${{ inputs.external_host }}
           repository_address: ${{ inputs.external_repo_url }}
           private_key_location: ${{ inputs.external_repo_ssh_key_location }}
           key_file_password: ${{ secrets.external_repo_ssh_key_password }}
+          username: ${{ inputs.external_repo_user }}
+          password: ${{ secrets.external_repo_password }}
 
       - name: Upload new repository to GH
         uses: ./.github/actions/upload-repo
-        if: ${{ inputs.import_external_repo == true }}
+        if: ${{ inputs.import_external_repo == true || inputs.import_external_repo == 'true' }}
         with:
           repo_location: ${{ steps.clone-repo.outputs.repo_location }}
           repository_name: ${{ inputs.gh_repo_name }}
