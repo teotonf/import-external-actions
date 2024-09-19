@@ -46,10 +46,14 @@ external_repo_url=git@bitbucket.org:fred-bede/foo
 # If you want to just create the repo in GH uncomment the next line
 #import_external_repo=false
 
+# if you want to import to an existing repo define
+gh_repo_address=<git clone https address from GH repository>
+
 # You can create or delete the repo, based on Terraform plan
-# Note that setting create and remove to "true" Terraform will just run the plan and do not apply any changes
+# Note that setting create and remove to "true" or "false" Terraform will just run the plan and do not apply any changes
 # create_repo=true
 # remove_repo=true
+
 
 # New repo visibility. If set to "public" default branch will be protected with PR requirement at least
 # gh_visibilty=public
