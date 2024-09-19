@@ -119,7 +119,7 @@ At the end, you should have something like:
 So to execute on `foo` repository config run:
 ```sh
 cd $HOME/act-scripts
-. ./import-repos.sh "foo"
+./import-repos.sh "foo"
 ```
 
 After run, you can get your GH read-only keys in `<Root folder you'd downloaded this repo>/my-tf-state/tf-output` folder
