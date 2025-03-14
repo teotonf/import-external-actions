@@ -3,8 +3,8 @@ name: Generate SSH key
 description: Generate SSH key to access the GH repository
 
 inputs:
-  key_location:
-    description: Path to save the key
+  key_name:
+    description: Name of the key
     type: string
     required: true
   key_password:
@@ -16,13 +16,20 @@ inputs:
     type: string
     required: true
 
+outputs:
+  repo_key_location:
+    description: The created ssh key location
+    value: ${{ steps.generate-ssh-key.outputs.key_location }}
+
 runs:
   using: composite
   steps:
     - name: Generate ssh key pair
+      id: generate-ssh-key
+      shell: bash
       run: |
         EMAIL=${{ inputs.email }}
-        KEY_FILE=${{ inputs.key_location }}
+        KEY_FILE=/tmp/tf-output//${{ inputs.key_name }}
 
         [ ! -f $KEY_FILE ] && {
           echo "Generating SSH key pair for $EMAIL at $KEY_FILE and password ${{ inputs.key_password }}"
@@ -30,3 +37,6 @@ runs:
         } || {
           echo "Key file already exists at $KEY_FILE"
         }
+
+        echo "key_location=$KEY_FILE" >> $GITHUB_OUTPUT
+

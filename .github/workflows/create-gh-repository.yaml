@@ -1,0 +1,72 @@
+name: Create GH repository
+run-name: Create GH repository 🚀
+
+on:
+  workflow_dispatch:
+    inputs:
+      # private_key_location:
+      #   description: Location of the private key to access GH.
+      #   type: string
+      private_email:
+        description: Associated email
+        type: string
+      gh_repo_name:
+        description: Name of the new repository
+        type: string
+        required: true
+      gh_repo_owner:
+        description: Name of the new repository
+        type: string
+      gh_repo_description:
+        description: Description of the new repository
+        type: string
+        required: true
+      gh_visibilty:
+        description: Visibility of the new repository
+        type: string
+        default: private
+      create_repo:
+        description: True to create the repository, false to just see the Terraform plan
+        type: boolean
+        required: true
+        default: true
+      remove_repo:
+        description: True to already create the repository, false to just see the Terraform plan
+        type: boolean
+        required: true
+        default: false
+      
+jobs:
+  configure-gh-repository:
+    runs-on: ubuntu-latest
+    if: inputs.create_repo == true || inputs.remove_repo == true
+    outputs:
+      new_repo_url: ${{ steps.tf-plan.outputs.new_repo_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v1
+
+      - name: Configure ssh key
+        uses: ./.github/actions/generate-ssh-key
+        id: ssh-key
+        with:
+          key_name: ${{ inputs.gh_repo_name }}
+          key_password: ${{ secrets.gh_ssh_key_password }}
+          email: ${{ inputs.private_email }}
+
+      - name: Terraform Init / Plan / Apply
+        id: tf-plan
+        uses: ./.github/actions/configure-gh-repo
+        with:
+          tf_state_out: "/tmp/create-tf-state"
+          repository_name: ${{ inputs.gh_repo_name }}
+          repository_owner: ${{ inputs.gh_repo_owner }}
+          gh_token: ${{ secrets.gh_token }}
+          gh_repo_description: ${{ inputs.gh_repo_description }}
+          gh_repo_visibility: ${{ inputs.gh_visibilty }}
+          gh_pub_key_location: "${{ steps.ssh-key.outputs.repo_key_location }}.pub"
+          create_repo: ${{ inputs.create_repo }}
+          remove_repo: ${{ inputs.remove_repo }}
+
+      #     repo_location: ${{ steps.clone-repo.outputs.repo_location }}

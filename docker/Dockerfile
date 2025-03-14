@@ -1,5 +1,5 @@
-FROM ubuntu:latest as base
-LABEL maintainer "Frederico Bedê <bede.apps@gmail.com>"
+FROM ubuntu:latest AS base
+LABEL maintainer="Frederico Bedê <bede.apps@gmail.com>"
 
 RUN apt-get update && apt-get install -y\
   tar\
