@@ -2,11 +2,8 @@ name: Create GH repository
 run-name: Create GH repository 🚀
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      # private_key_location:
-      #   description: Location of the private key to access GH.
-      #   type: string
       private_email:
         description: Associated email
         type: string
@@ -35,11 +32,45 @@ on:
         type: boolean
         required: true
         default: false
-      
+    outputs:
+      new_repo_url:
+        description: The created repository URL
+        value: ${{ jobs.configure-gh-repository.outputs.new_repo_url }}
+
+  workflow_dispatch:
+    inputs:
+      private_email:
+        description: Associated email
+        type: string
+      gh_repo_name:
+        description: Name of the new repository
+        type: string
+        required: true
+      gh_repo_owner:
+        description: Name of the new repository
+        type: string
+      gh_repo_description:
+        description: Description of the new repository
+        type: string
+        required: true
+      gh_visibilty:
+        description: Visibility of the new repository
+        type: string
+        default: private
+      create_repo:
+        description: True to create the repository, false to just see the Terraform plan
+        type: boolean
+        required: true
+        default: true
+      remove_repo:
+        description: True to already create the repository, false to just see the Terraform plan
+        type: boolean
+        required: true
+        default: false
+
 jobs:
   configure-gh-repository:
     runs-on: ubuntu-latest
-    if: inputs.create_repo == true || inputs.remove_repo == true
     outputs:
       new_repo_url: ${{ steps.tf-plan.outputs.new_repo_url }}
 
@@ -69,4 +100,3 @@ jobs:
           create_repo: ${{ inputs.create_repo }}
           remove_repo: ${{ inputs.remove_repo }}
 
-      #     repo_location: ${{ steps.clone-repo.outputs.repo_location }}

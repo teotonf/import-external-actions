@@ -1,0 +1,67 @@
+name: Import external repository
+run-name: Import 🚀
+
+on:
+  workflow_dispatch:
+    inputs:
+      private_email:
+        description: Associated email
+        type: string
+      gh_repo_name:
+        description: Name of the new repository
+        type: string
+        required: true
+      gh_repo_owner:
+        description: Name of the new repository
+        type: string
+      gh_repo_description:
+        description: Description of the new repository
+        type: string
+        required: true
+      gh_visibilty:
+        description: Visibility of the new repository
+        type: string
+        default: private
+      external_host:
+        description: Host of the external repository
+        type: string
+        required: true
+      external_repo_url:
+        description: URL of the external repository
+        type: string
+        required: true
+      external_repo_user:
+        description: User to access the external repository
+        type: string
+      external_repo_ssh_key_location:
+        description: Read key file location (Read access to cloned repo)
+        type: string
+      external_repo_ssh_key_password:
+        description: Read key file password, if needed (Read access to cloned repo)
+        type: string
+
+jobs:
+  create-gh-repository:
+    uses: ./.github/workflows/create-gh-repository.yaml
+    with:
+      private_email: ${{ inputs.private_email }}
+      gh_repo_name: ${{ inputs.gh_repo_name }}
+      gh_repo_owner: ${{ inputs.gh_repo_owner }}
+      gh_repo_description: ${{ inputs.gh_repo_description }}
+      gh_visibilty: ${{ inputs.gh_visibilty }}
+    secrets: inherit
+
+  import-to-gh-repository:
+    uses: ./.github/workflows/clone-repository.yaml
+    needs: create-gh-repository
+    with:
+      external_host: ${{ inputs.external_host }}
+      external_repo_url: ${{ inputs.external_repo_url }}
+      external_repo_user: ${{ inputs.external_repo_user }}
+      external_repo_ssh_key_location: ${{ inputs.external_repo_ssh_key_location }}
+      external_repo_ssh_key_password: ${{ inputs.external_repo_ssh_key_password }}
+      gh_repo_url: ${{ needs.create-gh-repository.outputs.new_repo_url }}
+      import_external_repo: true
+    secrets:
+      gh_token: ${{ secrets.gh_token }}
+

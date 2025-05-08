@@ -3,10 +3,9 @@ description: Clone full repo
 
 inputs:
   private_key_location:
-    description: Full path for directory of private key file to access GH 
+    description: Full path for directory of private key to external repo
   host:
     description: Full path for directory of private key file to access GH 
-    required: true
   repository_address:
     description: Full path for directory of private key file to access GH 
     required: true
@@ -29,7 +28,7 @@ runs:
   using: composite
   steps:
     - name: Configure SSH
-      if: ${{ inputs.private_key_location && inputs.key_file_password }}
+      if: ${{ inputs.private_key_location }}
       id: ssh-config
       shell: bash
       run: |
@@ -46,45 +45,67 @@ runs:
 
     - name: Check external repo connection
       shell: bash
-      if: ${{ inputs.private_key_location && inputs.key_file_password }}
+      if: ${{ inputs.private_key_location }}
       run: |
         K_FILE=${{ inputs.private_key_location }}
-        ASK_PASS=/tmp/askpass.sh
+
+        if [ -z $K_FILE ]; then
+          echo "Key file not found: $K_FILE"
+          exit 1
+        fi
+        
+        if [ ! -z "${{ inputs.key_file_password }}" ]; then
+          ASK_PASS=/tmp/askpass.sh
 
         cat <<EOF > $ASK_PASS
         #!/bin/bash
         echo "${{ inputs.key_file_password }}"
         EOF
 
-        chmod +x $ASK_PASS
+          chmod +x $ASK_PASS
 
-        eval "$(ssh-agent -s)"
-        SSH_ASKPASS_REQUIRE=force SSH_ASKPASS=$ASK_PASS ssh-add ${{ inputs.private_key_location }}
+          eval "$(ssh-agent -s)"
+          SSH_ASKPASS_REQUIRE=force SSH_ASKPASS=$ASK_PASS ssh-add ${{ inputs.private_key_location }}
+          echo "ASK_PASS=$ASK_PASS" >> $GITHUB_ENV
+        fi
+
         ssh -T git@${{ inputs.host }} -F ${{ steps.ssh-config.outputs.ssh_config_file }} -oStrictHostKeyChecking=no
-
-        echo "ASK_PASS=$ASK_PASS" >> $GITHUB_ENV
 
     - name: Configure external address
       id: external-address
       shell: bash
       run: |
-        [ ! -z "${{ inputs.private_key_location }}" ] && [ ! -z "${{ inputs.key_file_password }}" ] &&\
-          REPO_ADDRESS=`echo "${{ inputs.repository_address }}"` ||\
-          {
-            PASS=$(echo "{ \"pass\":\"${{ inputs.password }}\"}" | jq -r '.pass | @uri')
-            echo "::add-mask::$PASS"
-            REPO_ADDRESS=`echo ${{ inputs.repository_address }} | sed -e s,https://,https://${{ inputs.username }}:$PASS@,g`
-          }
+        if [ ! -z "${{ inputs.private_key_location }}" ]; then
+          REPO_ADDRESS=`echo "${{ inputs.repository_address }}"`
+        else
+          PASS=$(echo "{ \"pass\":\"${{ inputs.password }}\"}" | jq -r '.pass | @uri')
+          echo "::add-mask::$PASS"
+          REPO_ADDRESS=`echo ${{ inputs.repository_address }} | sed -e s,https://,https://${{ inputs.username }}:$PASS@,g`
+        fi
+        
+        echo "external_repo_url=$REPO_ADDRESS" >> $GITHUB_OUTPUT
 
-        echo "gh_address=$REPO_ADDRESS" >> $GITHUB_OUTPUT
+    - name: Configure GIT_SSH_COMMAND
+      shell: bash
+      if: ${{ inputs.private_key_location }}
+      run: |
+        if [ -z "$ASK_PASS" ]; then
+          echo "SSH_ASKPASS not configured"
+          git_ssh_cmd="ssh -F ${{ steps.ssh-config.outputs.ssh_config_file }}" 
+        else
+          echo "SSH_ASKPASS configured"
+          git_ssh_cmd="SSH_ASKPASS_REQUIRE=force SSH_ASKPASS=$ASK_PASS ssh -F ${{ steps.ssh-config.outputs.ssh_config_file }}"
+        fi
+
+        git config --global core.sshCommand "$git_ssh_cmd"
 
     - name: Clone external repository
       id: clone-repo
+      shell: bash
       run: |
+        REPO_ADDRESS=`echo ${{ steps.external-address.outputs.external_repo_url }}`
 
-        export GIT_SSH_COMMAND="SSH_ASKPASS_REQUIRE=force SSH_ASKPASS=$ASK_PASS ssh -F ${{ steps.ssh-config.outputs.ssh_config_file }}"
-
-        REPO_ADDRESS=`echo ${{ steps.external-address.outputs.gh_address }}`
+        echo "Cloning repository: $REPO_ADDRESS"
 
         [ -d /tmp/external-repo ] && rm -rf /tmp/external-repo
 

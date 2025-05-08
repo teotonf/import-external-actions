@@ -8,6 +8,9 @@ inputs:
   gh_token:
     description: The GitHub token
     required: true
+  gh_repo_url:
+    description: The GitHub repository URL
+    required: true
 
 runs:
   using: composite
@@ -25,7 +28,9 @@ runs:
           done
         }
 
-        REPO_ADDRESS=`echo $new_repo_url | sed -e s,https://,https://${{ inputs.gh_token }}@,g`
+        REPO_ADDRESS=`echo ${{ inputs.gh_repo_url }} | sed -e s,https://,https://${{ inputs.gh_token }}@,g`
+
+        echo "Pushing to $REPO_ADDRESS"
 
         branches=$(git branch | grep -v 'main' | sed 's,*,,g' | xargs || true)
 
