@@ -1,128 +1,75 @@
-# GitHub Actions Workflow for import an external repository to GitHub
+# Project Documentation Summary
 
-This repository is being used to run github actions locally using [act][nektos-act] to create and import an external repository to github.
-Act repository can be found in [act-repo][nektos-act-repo] 
+This document provides a summarized overview of the key components and functionalities described in the project files.
 
-> Note: no vars nor secrets where created on repo, so trying to run it on GH will not work.
+---
 
-## Repository organization
-- .github: contains the workflow code
-- docker: contains the configurations for generate a runner locally. The image has all tools required for the complete workflow execution.
-- terraform: Terraform code to create the GH repository.
+## GitHub Actions
 
-## Configuration requirements
-- Docker installed
-- Nektos act installed
+### [GitHub Actions Overview](.github/actions/README.md)
+The project includes custom GitHub Actions for automating repository management, SSH key generation, and Terraform operations. Key actions include:
+- **Configure GitHub Repository**: Manages repositories using Terraform.
+- **Download External Repository**: Clones external repositories via SSH or HTTPS.
+- **Generate SSH Key**: Creates SSH key pairs for secure access.
+- **Upload Repository to GitHub**: Pushes local repositories to GitHub.
 
-### Creating the runner
-To configure a runner use the [Dockerfile](./docker/Dockerfile) to create an image with the name `gh-runner` (the name of container will be used for the example)
+Each action is designed to be integrated into workflows for automation.
 
-### Configuring inputs and secrets
-For the example we will use files to configure inputs and secrets.
-Create a folder called `act-scripts` in `$HOME` folder, for example.
-Then supposing we want to migrate more than once repository, create a folder within `act-scripts` let's say `foo`. Then in `$HOME/act-scripts/foo` create a file called `inputs` with the contents as follows:
+---
 
-```sh
-# This the private key generated for read-only access in the new GH repo
-private_key_location=/tmp/tf-output/foo-ssh-key
-# For the key generation
-private_email=<your better email>
-# The name of the new repo to be created
-gh_repo_name=my-foo
-# The new repo owner
-gh_repo_owner=<repo owner>
+## Workflows
 
-# Some description for your repository
-gh_repo_description="Applications to be used by flux"
+### [Clone External Repository](.github/workflows/clone-repository-description.md)
+This workflow automates cloning an external repository and optionally uploading it to GitHub. It supports both programmatic (`workflow_call`) and manual (`workflow_dispatch`) triggers. Key jobs include:
+1. **Clone external repository**: Uses the `download-external-repo` action.
+2. **Upload to GitHub**: Uses the `upload-repo` action (conditional).
 
-# These configurations are to use when you configured ssh access in the external repository to be imported
-external_host=bitbucket.org
-external_repo_ssh_key_location=/tmp/certificates/bitbucket/read-only
+### [Create GitHub Repository](.github/workflows/create-gh-repository-explanation.md)
+This workflow automates the creation of GitHub repositories using Terraform. It supports:
+- SSH key generation via the `generate-ssh-key` action.
+- Repository management via the `configure-gh-repo` action.
+- Both manual and programmatic triggers.
 
-# Define it accordingly to the approach to access external repo (SSH / HTTPS). If both access was configured, SSH has precedence
-external_repo_url=git@bitbucket.org:fred-bede/foo
+### [Import External Repository](.github/workflows/import-external-to-gh-description.md)
+This workflow combines repository creation and external repository import. It consists of:
+1. **Create GitHub Repository**: Uses the `create-gh-repository` workflow.
+2. **Import External Repository**: Uses the `clone-repository` workflow to clone and upload external repositories.
 
-# Create / Remove / Plan (changing default values)
-# If you want to just create the repo in GH uncomment the next line
-#import_external_repo=false
+---
 
-# if you want to import to an existing repo define
-gh_repo_address=<git clone https address from GH repository>
+## Docker Setup
 
-# You can create or delete the repo, based on Terraform plan
-# Note that setting create and remove to "true" or "false" Terraform will just run the plan and do not apply any changes
-# create_repo=true
-# remove_repo=true
+### [Docker Setup Explanation](docker/README.md)
+The Docker setup provides an environment with Terraform and additional tools. Key features include:
+- A multi-stage `Dockerfile` for building images with Terraform, Git, and SSH tools.
+- Support for custom certificates via `.pem` files.
+- A user-friendly environment for Terraform operations.
 
+---
 
-# New repo visibility. If set to "public" default branch will be protected with PR requirement at least
-# gh_visibilty=public
-```
+## Terraform Configuration
 
-Configure secrets in file `$HOME/act-scripts/foo/secrets` as follows:
-```sh
-# Personal token with admin permission at least on repos
-gh_token=<your personal token in GH>
+### [Terraform GitHub Repository Management](terraform/terraform_overview.md)
+The Terraform configuration automates GitHub repository management. Key features include:
+- **Repository Creation**: Creates repositories with specified names, descriptions, and visibility.
+- **Branch Protection**: Enforces rules for the `main` branch.
+- **Deploy Key Management**: Adds SSH deploy keys for secure access.
 
-# git ssh approach for external access
-# if you protected your private key with password
-external_repo_ssh_key_password=<your external pkey password>
+### [Terraform Requirements and Resources](terraform/terraform.md)
+The configuration uses the `github` provider and includes resources for:
+- Repository creation.
+- Branch protection.
+- Deploy key management.
 
-# git https approach for external access
-external_repo_password=<your external repository password>
+Inputs and outputs are defined for flexibility and integration.
 
-# Note that if both HTTPS/SSH aproaches where defined, SSH has precedence
+---
 
-# protect your GH repository read-only key with a password 
-gh_ssh_key_password=<GH pkey password>
-```
+## How to Use
 
-At last, define a script in `$HOME/act-scripts/import-repos.sh` to run act as follows:
+1. Refer to the [GitHub Actions Overview](.github/actions/README.md) for details on custom actions.
+2. Explore the [Workflows](#workflows) section for automation examples.
+3. Use the [Docker Setup](docker/README.md) for a pre-configured Terraform environment.
+4. Follow the [Terraform Documentation](terraform/terraform_overview.md) for repository management.
 
-```sh
-#!/bin/bash
-
-# You can input the name of the folder that has the "inputs" and "secrets" files
-REPO_NAME=$1
-
-# Where you downloaded this repository
-REPO_LOCATION="$HOME/github/import-repository"
-
-# Location of the scripts. For this tutorial 
-SCRIPT_ARGS_LOCATION="$HOME/act-scripts/$REPO_NAME"
-
-# Terraform state output location
-TF_STAT_DIR="$REPO_LOCATION/my-tf-state"
-
-act \
---secret-file=$SCRIPT_ARGS_LOCATION/secrets \
---input-file=$SCRIPT_ARGS_LOCATION/inputs \
---rm \
--C $REPO_LOCATION \
--P ubuntu-latest=gh-runner \ # Name of the runner we defined when building the docker image in the beggining of this document
---action-offline-mode \
--W $REPO_LOCATION/.github/workflows/import-external.yaml \
---local-repository github.com@main=$REPO_LOCATION \
---container-options "-v $HOST_CERTIFICATES_LOCATION:/tmp/certificates \
--v $TF_STAT_DIR/my-tf-state:/tmp/import-tf-state \ 
--v $TF_STAT_DIR/tf-output:/tmp/tf-output" # Map your ssh keys for external access to a place within gh-runner container
-```
-
-At the end, you should have something like:
-- $HOME
-  - act-scripts
-    - foo
-      - secrets
-      - inputs
-    - import-repos.sh
-
-So to execute on `foo` repository config run:
-```sh
-cd $HOME/act-scripts
-./import-repos.sh "foo"
-```
-
-After run, you can get your GH read-only keys in `<Root folder you'd downloaded this repo>/my-tf-state/tf-output` folder
-
-[nektos-act-repo]: <https://github.com/nektos/act>
-[nektos-act]: <https://nektosact.com>
+For more details, click on the respective links provided above.
