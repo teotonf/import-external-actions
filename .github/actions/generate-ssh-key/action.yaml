@@ -15,6 +15,10 @@ inputs:
     description: Associated email
     type: string
     required: true
+  output_location:
+    description: Location to store the generated key
+    type: string
+    default: /tmp/ssh-keys
 
 outputs:
   repo_key_location:
@@ -29,7 +33,12 @@ runs:
       shell: bash
       run: |
         EMAIL=${{ inputs.email }}
-        KEY_FILE=/tmp/tf-output//${{ inputs.key_name }}
+        KEY_FILE=${{ inputs.output_location }}/${{ inputs.key_name }}
+
+        [ -d ${{ inputs.output_location }} ] && echo "Output directory already exists at ${{ inputs.output_location }}" || {
+          echo "Creating output directory at ${{ inputs.output_location }}"
+          mkdir -p ${{ inputs.output_location }}
+        }
 
         [ ! -f $KEY_FILE ] && {
           echo "Generating SSH key pair for $EMAIL at $KEY_FILE and password ${{ inputs.key_password }}"

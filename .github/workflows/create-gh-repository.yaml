@@ -25,13 +25,16 @@ on:
       create_repo:
         description: True to create the repository, false to just see the Terraform plan
         type: boolean
-        required: true
         default: true
       remove_repo:
         description: True to already create the repository, false to just see the Terraform plan
         type: boolean
-        required: true
         default: false
+      tf_output:
+        description: Location to store the terraform output
+        type: string
+        default: /tmp/create-tf-state
+
     outputs:
       new_repo_url:
         description: The created repository URL
@@ -42,6 +45,7 @@ on:
       private_email:
         description: Associated email
         type: string
+        required: true
       gh_repo_name:
         description: Name of the new repository
         type: string
@@ -49,6 +53,7 @@ on:
       gh_repo_owner:
         description: Name of the new repository
         type: string
+        required: true
       gh_repo_description:
         description: Description of the new repository
         type: string
@@ -60,13 +65,15 @@ on:
       create_repo:
         description: True to create the repository, false to just see the Terraform plan
         type: boolean
-        required: true
         default: true
       remove_repo:
         description: True to already create the repository, false to just see the Terraform plan
         type: boolean
-        required: true
         default: false
+      tf_output:
+        description: Location to store the terraform output
+        type: string
+        default: /tmp/create-tf-state
 
 jobs:
   configure-gh-repository:
@@ -85,12 +92,13 @@ jobs:
           key_name: ${{ inputs.gh_repo_name }}
           key_password: ${{ secrets.gh_ssh_key_password }}
           email: ${{ inputs.private_email }}
+          output_location: "${{ inputs.tf_output }}/ssh_keys"
 
       - name: Terraform Init / Plan / Apply
         id: tf-plan
         uses: ./.github/actions/configure-gh-repo
         with:
-          tf_state_out: "/tmp/create-tf-state"
+          tf_state_out: "${{ inputs.tf_output }}"
           repository_name: ${{ inputs.gh_repo_name }}
           repository_owner: ${{ inputs.gh_repo_owner }}
           gh_token: ${{ secrets.gh_token }}

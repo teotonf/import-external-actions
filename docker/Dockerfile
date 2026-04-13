@@ -48,3 +48,7 @@ RUN useradd -ms /bin/bash ${USER}
 USER ${USER}
 
 WORKDIR /home/${USER}
+
+RUN mkdir -p /home/${USER}/terraform-state
+
+VOLUME [ "/home/${USER}/terraform-state" ]

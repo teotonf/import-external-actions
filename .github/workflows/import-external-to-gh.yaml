@@ -39,6 +39,10 @@ on:
       external_repo_ssh_key_password:
         description: Read key file password, if needed (Read access to cloned repo)
         type: string
+      tf_output:
+        description: Location to store the terraform output
+        type: string
+        default: /tmp/tf-output
 
 jobs:
   create-gh-repository:
@@ -49,6 +53,7 @@ jobs:
       gh_repo_owner: ${{ inputs.gh_repo_owner }}
       gh_repo_description: ${{ inputs.gh_repo_description }}
       gh_visibilty: ${{ inputs.gh_visibilty }}
+      tf_output: ${{ inputs.tf_output }}
     secrets: inherit
 
   import-to-gh-repository:
