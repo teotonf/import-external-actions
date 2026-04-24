@@ -43,6 +43,14 @@ on:
         description: Location to store the terraform output
         type: string
         default: /tmp/tf-output
+      create_repo:
+        description: True to create the repository, false to just see the Terraform plan
+        type: boolean
+        default: true
+      remove_repo:
+        description: True to already create the repository, false to just see the Terraform plan
+        type: boolean
+        default: false
 
 jobs:
   create-gh-repository:
@@ -54,6 +62,8 @@ jobs:
       gh_repo_description: ${{ inputs.gh_repo_description }}
       gh_visibilty: ${{ inputs.gh_visibilty }}
       tf_output: ${{ inputs.tf_output }}
+      create_repo: ${{ inputs.create_repo }}
+      remove_repo: ${{ inputs.remove_repo }}
     secrets: inherit
 
   import-to-gh-repository:
